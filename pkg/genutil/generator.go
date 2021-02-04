@@ -8,7 +8,7 @@ import (
 )
 
 type Generator interface {
-	Generate()
+	Generate() error
 }
 
 type G struct {
@@ -53,11 +53,14 @@ func (g *G) Q(ident protogen.GoIdent) string {
 	return g.QualifiedGoIdent(ident)
 }
 
-func (g *G) Generate() {
-	g.gen.Generate()
+func (g *G) Generate() error {
+	if err := g.gen.Generate(); err != nil {
+		return err
+	}
 	_, _ = g.Write(g.preBuf.Bytes())
 	_, _ = g.Write(g.buf.Bytes())
 	_, _ = g.Write(g.postBuf.Bytes())
+	return nil
 }
 
 func (g *G) Pre(format string, a ...interface{}) {
