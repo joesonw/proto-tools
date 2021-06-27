@@ -12,6 +12,12 @@ type Q func(protogen.GoIdent) string
 func FieldGoType(q Q, f *protogen.Field) string {
 	goType := ""
 
+	if f.Desc.IsMap() {
+		keyType := FieldGoType(q, f.Message.Fields[0])
+		valueType := FieldGoType(q, f.Message.Fields[1])
+		return fmt.Sprintf("map[%s]%s", keyType, valueType)
+	}
+
 	switch f.Desc.Kind() {
 	case protoreflect.BoolKind:
 		goType = "bool"
@@ -37,13 +43,8 @@ func FieldGoType(q Q, f *protogen.Field) string {
 		goType = "*" + q(f.Message.GoIdent)
 	}
 
-	switch {
-	case f.Desc.IsList():
+	if f.Desc.IsList() {
 		return "[]" + goType
-	case f.Desc.IsMap():
-		keyType := FieldGoType(q, f.Message.Fields[0])
-		valueType := FieldGoType(q, f.Message.Fields[1])
-		return fmt.Sprintf("map[%s]%s", keyType, valueType)
 	}
 
 	return goType
