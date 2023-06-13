@@ -9,11 +9,13 @@ import (
 	"github.com/joesonw/proto-tools/pkg/protoutil"
 )
 
+var (
+	flags         flag.FlagSet
+	importPrefix  = flags.String("import_prefix", "", "prefix to prepend to import paths")
+	disableReturn = flags.Bool("disable-return", false, "disable return after set")
+)
+
 func main() {
-	var (
-		flags        flag.FlagSet
-		importPrefix = flags.String("import_prefix", "", "prefix to prepend to import paths")
-	)
 	importRewriteFunc := func(importPath protogen.GoImportPath) protogen.GoImportPath {
 		switch importPath {
 		case "context", "fmt", "math":
@@ -78,20 +80,38 @@ func (g *G) genMessage(m *protogen.Message) {
 	}
 
 	for _, f := range m.Fields {
-		g.F("func (z *%s) Set%s(v %s) *%s {", m.GoIdent, f.GoName, protoutil.FieldGoType(g.Q, f), m.GoIdent)
+		if *disableReturn {
+			g.F("func (z *%s) Set%s(v %s) {", m.GoIdent, f.GoName, protoutil.FieldGoType(g.Q, f))
+		} else {
+			g.F("func (z *%s) Set%s(v %s) *%s {", m.GoIdent, f.GoName, protoutil.FieldGoType(g.Q, f), m.GoIdent)
+		}
 		g.F("z.%s = v", f.GoName)
-		g.F(" return z")
+		if !*disableReturn {
+			g.F("return z")
+		}
 		g.F("}")
 		switch {
 		case f.Desc.IsList():
-			g.F("func (z *%s) Append%s(v %s) *%s {", m.GoIdent, f.GoName, protoutil.FieldGoType(g.Q, protoutil.ElemOfListField(f)), m.GoIdent)
+			if *disableReturn {
+				g.F("func (z *%s) Append%s(v %s) {", m.GoIdent, f.GoName, protoutil.FieldGoType(g.Q, protoutil.ElemOfListField(f)))
+			} else {
+				g.F("func (z *%s) Append%s(v %s) *%s {", m.GoIdent, f.GoName, protoutil.FieldGoType(g.Q, protoutil.ElemOfListField(f)), m.GoIdent)
+			}
 			g.F("z.%s = append(z.%s, v)", f.GoName, f.GoName)
-			g.F(" return z")
+			if !*disableReturn {
+				g.F("return z")
+			}
 			g.F("}")
 		case f.Desc.IsMap():
-			g.F("func (z *%s) Put%s(k %s, v %s) *%s {", m.GoIdent, f.GoName, protoutil.FieldGoType(g.Q, f.Message.Fields[0]), protoutil.FieldGoType(g.Q, f.Message.Fields[1]), m.GoIdent)
+			if *disableReturn {
+				g.F("func (z *%s) Put%s(k %s, v %s) {", m.GoIdent, f.GoName, protoutil.FieldGoType(g.Q, f.Message.Fields[0]), protoutil.FieldGoType(g.Q, f.Message.Fields[1]))
+			} else {
+				g.F("func (z *%s) Put%s(k %s, v %s) *%s {", m.GoIdent, f.GoName, protoutil.FieldGoType(g.Q, f.Message.Fields[0]), protoutil.FieldGoType(g.Q, f.Message.Fields[1]), m.GoIdent)
+			}
 			g.F("z.%s[k] = v", f.GoName)
-			g.F(" return z")
+			if !*disableReturn {
+				g.F("return z")
+			}
 			g.F("}")
 		}
 	}
