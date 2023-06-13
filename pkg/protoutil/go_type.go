@@ -9,12 +9,21 @@ import (
 
 type Q func(protogen.GoIdent) string
 
-func FieldGoType(q Q, f *protogen.Field) string {
+type Option func(q Q, f *protogen.Field) (ok bool, result string)
+
+func FieldGoType(q Q, f *protogen.Field, options ...Option) string {
 	goType := ""
+	ok := true
+	for _, option := range options {
+		ok, goType = option(q, f)
+	}
+	if !ok {
+		return goType
+	}
 
 	if f.Desc.IsMap() {
-		keyType := FieldGoType(q, f.Message.Fields[0])
-		valueType := FieldGoType(q, f.Message.Fields[1])
+		keyType := FieldGoType(q, f.Message.Fields[0], options...)
+		valueType := FieldGoType(q, f.Message.Fields[1], options...)
 		return fmt.Sprintf("map[%s]%s", keyType, valueType)
 	}
 
